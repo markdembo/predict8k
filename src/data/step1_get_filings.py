@@ -7,9 +7,6 @@ from edgarsearch import edgarsearch
 
 SAMPLE_START = "20140601"
 SAMPLE_END = "20141231"
-DIR_WORK = "data/raw/edgar/"
-SUB_INDEX = "index/"
-SUB_FILINGS = "filings/"
 FILTER_FORMTYPE = ["8-K"]
 
 
@@ -43,5 +40,8 @@ if __name__ == "__main__":
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(SAMPLE_START, SAMPLE_END, DIR_WORK, SUB_INDEX,
-         SUB_FILINGS, FILTER_FORMTYPE)
+    main(SAMPLE_START, SAMPLE_END,
+         os.environ.get("DIR_WORK"),
+         os.environ.get("SUB_INDEX"),
+         os.environ.get("SUB_FILINGS"),
+         FILTER_FORMTYPE)

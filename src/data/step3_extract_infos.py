@@ -9,11 +9,6 @@ from tqdm import tqdm
 from dotenv import find_dotenv, load_dotenv
 from bs4 import BeautifulSoup
 
-INPUT_DIR = "data/interim/"
-INPUT_SUFFIX = "_content"
-OUTPUT_DIR = "data/interim/"
-OUTPUT_SUFFIX = "_extract"
-
 
 def series_extract(series, search, flag):
     """Extract named groups from strings."""
@@ -269,4 +264,7 @@ if __name__ == '__main__':
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(INPUT_DIR, INPUT_SUFFIX, OUTPUT_DIR, OUTPUT_SUFFIX)
+    main(os.environ.get("INPUT_DIR"),
+         os.environ.get("INPUT_SUFFIX"),
+         os.environ.get("OUTPUT_DIR"),
+         os.environ.get("OUTPUT_SUFFIX"))

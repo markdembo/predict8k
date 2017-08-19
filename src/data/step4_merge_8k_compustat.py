@@ -12,15 +12,6 @@ from tqdm import tqdm, trange
 
 SAMPLE_START_YEAR = 2015
 SAMPLE_END_YEAR = 2016
-COMPUSTAT_PATH = "data/external/"
-COMPUSTAT_PATTERN = "Compustat_YYYY.csv"
-EXTRACTS_PATH = "data/interim/"
-EXTRACTS_PATTERN = "*_extract.csv"
-
-WRDS_PATH = "data/interim/"
-WRDS_SUFFIX = "_wrdsinput"
-MERGE_PATH = "data/interim/"
-MERGE_SUFFIX = "_merge"
 
 
 def merge_computstat_filings(sample_start_year, sample_end_year,
@@ -106,6 +97,12 @@ if __name__ == "__main__":
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(SAMPLE_START_YEAR, SAMPLE_END_YEAR, COMPUSTAT_PATH, COMPUSTAT_PATTERN,
-         EXTRACTS_PATH, EXTRACTS_PATTERN, MERGE_PATH, MERGE_SUFFIX,
-         WRDS_PATH, WRDS_SUFFIX)
+    main(SAMPLE_START_YEAR, SAMPLE_END_YEAR,
+         os.environ.get("COMPUSTAT_PATH"),
+         os.environ.get("COMPUSTAT_PATTERN"),
+         os.environ.get("EXTRACTS_PATH"),
+         os.environ.get("EXTRACTS_PATTERN"),
+         os.environ.get("MERGE_PATH"),
+         os.environ.get("MERGE_SUFFIX"),
+         os.environ.get("WRDS_PATH"),
+         os.environ.get("WRDS_SUFFIX"))

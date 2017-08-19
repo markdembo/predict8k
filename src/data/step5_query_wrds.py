@@ -13,13 +13,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-WRDS_PATH = "data/interim/"
-WRDS_SUFFIX = "_wrdsinput"
-URL = ("https://wrds-web.wharton.upenn.edu/"
-       "wrds/ds/wrdseventstudy/taq/index.cfm?queryID=792864")
-WRDS_OVERVIEW = "request_overview.csv"
-DOWNLOAD_PATH = "data/external/"
-
 
 def get_files(wrds_path, wrds_suffix):
     """Find all input files for the query."""
@@ -139,7 +132,7 @@ def main(wrds_path, wrds_suffix, wrds_overview,
          url, user, password, download_path):
     """Consolidate filings into csv files."""
     files = get_files(wrds_path, wrds_suffix)
-    corrected_path = os.path.abspath(DOWNLOAD_PATH) + r"\\"
+    corrected_path = os.path.abspath(download_path) + r"\\"
     # corrected_path = re.sub(r"\\", "/",
     res = pd.DataFrame(columns=("file", "time"))
     for f in tqdm(files):
@@ -156,5 +149,10 @@ if __name__ == "__main__":
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(WRDS_PATH, WRDS_SUFFIX, WRDS_OVERVIEW, URL,
-         os.environ.get("WRDS_USER"), os.environ.get("WRDS_PW"), DOWNLOAD_PATH)
+    main(os.environ.get("WRDS_PATH"),
+         os.environ.get("WRDS_SUFFIX"),
+         os.environ.get("WRDS_OVERVIEW"),
+         os.environ.get("URL"),
+         os.environ.get("WRDS_USER"),
+         os.environ.get("WRDS_PW"),
+         os.environ.get("DOWNLOAD_PATH"))

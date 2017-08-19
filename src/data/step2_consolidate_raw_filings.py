@@ -7,11 +7,6 @@ import glob
 from dotenv import find_dotenv, load_dotenv
 from tqdm import tqdm
 
-FILINGS_PATH = "data/raw/edgar/"
-FILINGS_PATTERN = "filings*.csv"
-OUTPUT_PATH = "data/interim/"
-OUTPUT_SUFFIX = "_content"
-
 
 def readandstore(row):
     """Open file and return content."""
@@ -42,4 +37,7 @@ if __name__ == "__main__":
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(FILINGS_PATH, FILINGS_PATTERN, OUTPUT_PATH, OUTPUT_SUFFIX)
+    main(os.environ.get("FILINGS_PATH"),
+         os.environ.get("FILINGS_PATTERN"),
+         os.environ.get("OUTPUT_PATH"),
+         os.environ.get("OUTPUT_SUFFIX"))

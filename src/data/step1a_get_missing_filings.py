@@ -1,4 +1,5 @@
 """Get 8-k filings from edgar database."""
+import os
 import glob
 import pandas as pd
 import logging
@@ -6,27 +7,21 @@ import logging.config
 from dotenv import find_dotenv, load_dotenv
 from edgarsearch import edgarsearch, tools
 
-INDEX_PATH = "data/raw/edgar/index/"
-INDEX_PATTERN = "*.txt"
-DOCS_PATH = "data/raw/edgar/"
-DOCS_PATTERN = "*.csv"
 FORM_TYPE = "8-K"
-OUTPATH_PATH = "data/raw/edgar/"
-OUTPUT_FNAME = "filings_rest.csv"
 
 
 def get_differences(index_path, index_pattern, docs_path,
                     docs_pattern, form_type):
     """Return index of files not yet downloaded."""
     # Consolidating downloading filings
-    doc_files = glob.glob(DOCS_PATH + DOCS_PATTERN)
+    doc_files = glob.glob(docs_path + docs_pattern)
     docs_dfs = [pd.read_csv(x) for x in doc_files]
     docs_cons = pd.concat(docs_dfs)
     docs_filtered = docs_cons.loc[docs_cons.seq == 0].copy()
     docs_filtered.rename(columns={"url": "File Name"}, inplace=True)
 
     # Consolidating 8-K filings
-    index_files = glob.glob(INDEX_PATH + INDEX_PATTERN)
+    index_files = glob.glob(index_path + index_pattern)
     read_txt = lambda x: pd.read_fwf(x,
                                      widths=[12, 62, 12, 12, 52],
                                      skiprows=8,
@@ -86,5 +81,10 @@ if __name__ == "__main__":
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
 
-    main(INDEX_PATH, INDEX_PATTERN, DOCS_PATH, DOCS_PATTERN, FORM_TYPE,
-         OUTPATH_PATH, OUTPUT_FNAME)
+    main(os.environ.get("INDEX_PATH"),
+         os.environ.get("INDEX_PATTERN"),
+         os.environ.get("DOCS_PATH"),
+         os.environ.get("DOCS_PATTERN"),
+         FORM_TYPE,
+         os.environ.get("OUTPATH_PATH"),
+         os.environ.get("OUTPUT_FNAME"))
