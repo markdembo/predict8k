@@ -16,14 +16,21 @@ def main(sample_start, sample_end, dir_work, sub_index,
         filter_formtype=filter_formtype,
     )
     logger.info('Downloading index files from EDGAR database')
-    search.download_index()
+    try:
+        search.downloadindex()
+    except Exception as e:
+        logger.error(e)
+
     logger.info('Downloading filings from EDGAR database')
-    search.download_filings(
-        text_only=True,
-        chunk_size=100,
-        attempts_max=5,
-        timeout=45,
-        fname_form="%Y/%m/%Y%m%d_%company_",
-        show_progress=False,
-    )
+    try:
+        search.downloadfilings(
+            text_only=True,
+            chunk_size=100,
+            attempts_max=5,
+            timeout=45,
+            fname_form="%Y/%m/%Y%m%d_%company_",
+            show_progress=False,
+        )
+    except Exception as e:
+        logger.error(e)
     return search.docs

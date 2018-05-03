@@ -1,10 +1,6 @@
 """Get 8-k filings from edgar database."""
-import os
 import glob
 import pandas as pd
-import logging
-import logging.config
-from dotenv import find_dotenv, load_dotenv
 from edgarsearch import edgarsearch, tools
 
 FORM_TYPE = "8-K"
