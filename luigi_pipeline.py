@@ -1,7 +1,7 @@
 """Luigi pipeline.
 
 To run:
-python -m luigi --module luigi_pipeline --local-scheduler
+python -m luigi --module luigi_pipeline GetFilings --date "2018-02" --local-scheduler
 
 """
 import os
@@ -15,7 +15,21 @@ import datetime
 
 
 class GetFilings(luigi.Task):
-    """Class A."""
+    """Download index and filings_.
+
+    Downloads index, filings and verifies that all files have been downloaded
+
+    Args:
+        date (string): Format YYYY-MM
+        formtype (list): List of strings in the formmat
+
+    Returns:
+        None
+
+    Raises:
+        None
+
+    """
 
     date = luigi.parameter.MonthParameter()
     formtype = luigi.ListParameter(default=["8-K"])
@@ -32,7 +46,6 @@ class GetFilings(luigi.Task):
             "{:filings_%Y-%m.csv}"
             .format(self.date)
         )
-        print(edgar_dir)
         return luigi.LocalTarget(edgar_dir + filename)
 
     def run(self):
@@ -52,24 +65,15 @@ class GetFilings(luigi.Task):
             self.formtype,
             logger,
         )
-        print(self.docs)
+
+        try:
+            logger.info(docs)
+        except Exception as e:
+            logger.error(e)
+
         with self.output().open('w') as out_file:
             docs.to_csv(out_file, encoding="utf-8")
-        print(self.docs)
 
-
-"""
-class Execute(luigi.WrapperTask):
-    "Class A.""
-
-    date = luigi.parameter.MonthParameter()
-    formtype = luigi.ListParameter(default=["8-K"])
-
-    def requires(self):
-        ""Set requirements for the task.""
-        yield [GetFilings(date=self.date, formtype=self.formtype)]
-
-"""
 
 """
 if __name__ == '__main__':
