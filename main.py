@@ -1,7 +1,7 @@
 """Luigi pipeline.
 
 To run:
-python -m luigi --module main ConsolidateFilings --date "2018-02" --local-scheduler
+python -m luigi --module main ExtractInfo --date "2018-02" --local-scheduler
 
 TODO: Add Step 3
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
@@ -46,7 +46,7 @@ class GetFilings(luigi.Task):
     def output(self):
         """Output of the task."""
         load_dotenv(find_dotenv())
-        edgar_dir = os.environ.get("EDGAR_DIR")
+        edgar_dir = os.environ.get("PATH_EDGAR")
         filename = (
             "{:filings_%Y-%m_}"
             .format(self.date)
@@ -68,9 +68,9 @@ class GetFilings(luigi.Task):
         docs = download.main(
             start_date.strftime("%Y%m%d"),
             end_date.strftime("%Y%m%d"),
-            os.environ.get("EDGAR_DIR"),
-            os.environ.get("SUB_INDEX"),
-            os.environ.get("SUB_FILINGS"),
+            os.environ.get("PATH_EDGAR"),
+            os.environ.get("PATH_INDEX"),
+            os.environ.get("PATH_FILINGS"),
             self.formtype,
             logger,
         )
@@ -104,12 +104,12 @@ class ConsolidateFilings(luigi.Task):
 
     def requires(self):
         """Set requirements for the task."""
-        return [GetFilings(self.date, self.formtype)]
+        return GetFilings(self.date, self.formtype)
 
     def output(self):
         """Output of the task."""
         load_dotenv(find_dotenv())
-        output_dir = os.environ.get("OUTPUT_PATH")
+        output_dir = os.environ.get("PATH_INTERIM")
         filename = (
             "{:filings_%Y-%m_content.csv}"
             .format(self.date)
@@ -122,9 +122,9 @@ class ConsolidateFilings(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            with self.input()[0].open('r') as in_file:
+            with self.input().open('r') as in_file:
                 docs = consolidate.main(
-                    pd.read_csv(in_file, index_col=0),
+                    pd.read_csv(in_file, index_col=0, encoding="utf-8"),
                     logger,
                 )
         except Exception as e:
@@ -156,14 +156,14 @@ class ExtractInfo(luigi.Task):
 
     def requires(self):
         """Set requirements for the task."""
-        return [GetFilings(self.date, self.formtype)]
+        return [ConsolidateFilings(self.date, self.formtype)]
 
     def output(self):
         """Output of the task."""
         load_dotenv(find_dotenv())
-        output_dir = os.environ.get("OUTPUT_PATH")
+        output_dir = os.environ.get("PATH_INTERIM")
         filename = (
-            "{:filings_%Y-%m_content.csv}"
+            "{:filings_%Y-%m_extract.csv}"
             .format(self.date)
         )
         return luigi.LocalTarget(output_dir + filename)
@@ -173,13 +173,12 @@ class ExtractInfo(luigi.Task):
         logging.config.fileConfig("logging.conf")
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
-        docs = extract.main(
-            pd.read_csv(self.input(), index_col=0),
-            logger,
-        )
-
         try:
-            logger.info(docs)
+            with self.input()[0].open('r') as in_file:
+                docs = extract.main(
+                    pd.read_csv(in_file, index_col=0, encoding="utf-8").reset_index(),
+                    logger,
+                )
         except Exception as e:
             logger.error(e)
 

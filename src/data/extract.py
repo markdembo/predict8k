@@ -1,20 +1,19 @@
 """Extract all information from SEC headers.
 
 TODO: Make pipeline compatible
-TODO: Strip modules
-TODO: Change from folder processing to single file processing
-
+FIXME: RE data extraction
 """
 import pandas as pd
 import re
 from tqdm import tqdm
-from dotenv import find_dotenv, load_dotenv
 from bs4 import BeautifulSoup
+[0]
 
 
 def series_extract(series, search, flag):
     """Extract named groups from strings."""
-    result = series.str.extract(search, expand=False, flags=flag)
+    print(series.str.extract(search, expand=False, flags=re.DOTALL))
+    result = series.str.extract(search, expand=False, flags=re.DOTALL)
     no_integers = [x for x in result.columns.values if not isinstance(x, int)]
     return result[no_integers].copy()
 
@@ -42,7 +41,11 @@ def extract_secinfos(df):
         ".*?ITEM INFORMATION:[\\t]+(?P<ITEM_INFO>.+?)[\\r\\n|.]+?"
         "FILED AS OF DATE:[\\t]+(?P<DATE_FILED>.+?)\\r\\n"
         "(DATE AS OF CHANGE:[\\t]+(?P<CHANGE_DATE>\d+)?[\\r\\n]*)?")
+
     secdf = series_extract(df.iloc[:, 0], search_sec, re.DOTALL)
+    with open("df.csv", mode="w") as f:
+        df.iloc[:, 0].to_csv(f)
+
     """
     itemsdf = (
         secdf
@@ -54,6 +57,7 @@ def extract_secinfos(df):
     return secdf, dummiesdf
     """
     secdf["ITEM_INFO"] = repr(secdf["ITEM_INFO"])
+    print("Success!")
     return secdf
 
 
@@ -179,20 +183,21 @@ def extract_formercomp(df):
     return formerdf
 
 
-def run_header_pipeline(fname):
+def run_header_pipeline(doc):
     """Run extraction pipeline."""
-    # Import data and clean up
-    importdf = pd.read_csv(fname, index_col=0).reset_index()
     # Select only the headfiles from the filings
-    onlyheadersdf = get_headerfiles(importdf)
+    onlyheadersdf = get_headerfiles(doc)
     # Extract the SEC information
-    # secdf, dummiesdf = extract_secinfos(onlyheadersdf)
     secdf = extract_secinfos(onlyheadersdf)
+    print(secdf)
     # Split the rest of header into processable columns
     workdf = process_df(onlyheadersdf)
+    print(workdf)
     # Extract company data, filings data, adresses and former company infor
     compdatadf = extract_compdata(workdf)
+    print("Compdate")
     filingsdf = extract_filinginfos(workdf)
+    print("filingsdf")
     businessdf, maildf = extract_addresses(workdf)
     formerdf = extract_formercomp(workdf)
     # Consolidate all information contained in the header
@@ -203,10 +208,11 @@ def run_header_pipeline(fname):
                         businessdf,
                         maildf,
                         formerdf,
-                        importdf.loc[onlyheadersdf.index]["url"]],
+                        doc.loc[onlyheadersdf.index]["url"]],
                        axis=1)
     # Standardize column names
     consdf.columns = consdf.columns.str.lower().str.replace(" ", "_")
+    print("Made it through pipeline")
     return consdf
 
 
@@ -223,12 +229,10 @@ def extract_filings_txt(row):
     return repr(processed)
 
 
-def run_filings_pipeline(fname):
+def run_filings_pipeline(doc):
     """Run extraction pipeline."""
-    # Import data and clean up
-    importdf = pd.read_csv(fname, index_col=0).reset_index()
     # Select only the headfiles from the filings
-    onlyfilingsdf = get_8kfilings(importdf)
+    onlyfilingsdf = get_8kfilings(doc)
     # Extract the SEC information
     result = onlyfilingsdf.apply(extract_filings_txt, axis=1)
     # Merge with original dataframe
@@ -238,38 +242,19 @@ def run_filings_pipeline(fname):
     return mergedf
 
 
-def main(input_dir, input_suffix, output_dir, output_suffix, logger):
+def main(doc, logger):
     """Extract information from filings."""
 
-    # get iput files
-    alldocs = glob.glob(input_dir + "*" + input_suffix + ".csv")
-    for doc in tqdm(alldocs):
-        tqdm.write("Extracting from %s" % doc)
-        # Extract header data
+    # Extract header data
+    tqdm.write("Extracting metadata.")
+    extract_header = run_header_pipeline(doc)
 
-        tqdm.write("Extracting metadata.")
-        extract_header = run_header_pipeline(doc)
+    # Extract filing data
+    tqdm.write("Extracting filings content.")
+    extract_txt = run_filings_pipeline(doc)
 
-        # Extract filing data
-        tqdm.write("Extracting filings content.")
-        extract_txt = run_filings_pipeline(doc)
-
-        # Merge and store
-        tqdm.write("Consolidating and saving on disk.")
-        consdf = pd.merge(extract_txt, extract_header, on="url")
-        fname = os.path.basename(doc).replace(input_suffix, output_suffix)
-        consdf.to_csv(output_dir + fname, encoding="utf-8")
-        tqdm.write("Done.")
-
-
-if __name__ == '__main__':
-    logging.config.fileConfig("logging.conf")
-    logger = logging.getLogger(__name__)
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
-
-    main(os.environ.get("INPUT_DIR"),
-         os.environ.get("INPUT_SUFFIX"),
-         os.environ.get("OUTPUT_DIR"),
-         os.environ.get("OUTPUT_SUFFIX"))
+    # Merge and store
+    tqdm.write("Consolidating and saving on disk.")
+    consdf = pd.merge(extract_txt, extract_header, on="url")
+    tqdm.write("Done.")
+    return consdf
