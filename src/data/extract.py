@@ -1,10 +1,12 @@
-"""Extract all information from SEC headers."""
+"""Extract all information from SEC headers.
+
+TODO: Make pipeline compatible
+TODO: Strip modules
+TODO: Change from folder processing to single file processing
+
+"""
 import pandas as pd
 import re
-import glob
-import os
-import logging
-import logging.config
 from tqdm import tqdm
 from dotenv import find_dotenv, load_dotenv
 from bs4 import BeautifulSoup
@@ -19,8 +21,8 @@ def series_extract(series, search, flag):
 
 def get_headerfiles(df):
     """Extract header files only from documents."""
-    hdf = df.loc[df.seq == 0].copy()
-    splitdf = hdf.content.str.split("FILER:", expand=True)
+    header_df = df.loc[df.seq == 0].copy()
+    splitdf = header_df.content.str.split("FILER:", expand=True)
     return splitdf
 
 
@@ -209,7 +211,7 @@ def run_header_pipeline(fname):
 
 
 def extract_filings_txt(row):
-    """Extract text from filings hhtml file."""
+    """Extract text from filings html file."""
     soup = BeautifulSoup(row["content"], "lxml")
     raw = soup.get_text()
     processed = re.sub("\n+", " ", re.sub("\xa0", " ", raw))
@@ -236,12 +238,15 @@ def run_filings_pipeline(fname):
     return mergedf
 
 
-def main(input_dir, input_suffix, output_dir, output_suffix):
+def main(input_dir, input_suffix, output_dir, output_suffix, logger):
     """Extract information from filings."""
+
+    # get iput files
     alldocs = glob.glob(input_dir + "*" + input_suffix + ".csv")
     for doc in tqdm(alldocs):
-        # Extract header data
         tqdm.write("Extracting from %s" % doc)
+        # Extract header data
+
         tqdm.write("Extracting metadata.")
         extract_header = run_header_pipeline(doc)
 

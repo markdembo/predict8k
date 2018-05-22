@@ -1,36 +1,10 @@
-"""Get 8-k filings from edgar database."""
+"""Get 8-k filings from edgar database.
+
+HACK: Use edgarsearch v0.3 not 0.2; still not completely silent
+
+"""
 from edgarsearch import edgarsearch
 import pandas as pd
-
-
-"""
-def download(diff, outpath_path, output_fname, logger):
-    "Download index and filigns from EDGAR database.""
-    logger.info('Downloading data from EDGAR database')
-    search = edgarsearch.Search("19000101",
-                                "20201231",
-                                -1,
-                                dir_work="data/raw/edgar/",
-                                sub_index="index/",
-                                sub_filings="filings/",
-                                filter_formtype=["8-K"])
-    logger.info('Downloading missing filings from EDGAR database')
-    search.download_filings(index=diff, text_only=True,
-                            fname_form="%Y/%m/%Y%m_%company",
-                            chunk_size=100)
-    output = tools.finduniquefname(outpath_path + output_fname, mode="num")
-    search.docs.to_csv(output, encoding="utf-8")
-
-
-def main(index_path, index_pattern, docs_path, docs_pattern,
-         form_type, outpath_path, output_fname):
-    "Obtain missing filings.""
-    missing = get_differences(index_path, index_pattern, docs_path,
-                              docs_pattern, form_type)
-    print("Files identified as missing: %s" % missing.shape[0])
-    if missing.shape[0] > 0:
-        downkload(missing, outpath_path, output_fname)
-"""
 
 
 def main(sample_start, sample_end, dir_work, sub_index,
@@ -48,13 +22,13 @@ def main(sample_start, sample_end, dir_work, sub_index,
     )
     logger.info('Downloading index files from EDGAR database')
     try:
-        search.downloadindex()
+        search.download_index()
     except Exception as e:
         logger.error(e)
 
     logger.info('Downloading filings from EDGAR database')
     try:
-        search.downloadfilings(
+        search.download_filings(
             text_only=True,
             chunk_size=100,
             attempts_max=5,
@@ -66,8 +40,6 @@ def main(sample_start, sample_end, dir_work, sub_index,
         logger.error(e)
 
     # Check if download is completete
-
-    # JUST FOR TESTING [:-1]
     output = search.docs.copy()
     results = search.docs.loc[search.docs.seq == 0].copy()
     results.rename(columns={"url": "File Name"}, inplace=True)
