@@ -1,18 +1,11 @@
-"""Extract all information from SEC headers.
-
-TODO: Make pipeline compatible
-FIXME: RE data extraction
-"""
+"""Extract all information from SEC headers."""
 import pandas as pd
 import re
-from tqdm import tqdm
 from bs4 import BeautifulSoup
-[0]
 
 
 def series_extract(series, search, flag):
     """Extract named groups from strings."""
-    print(series.str.extract(search, expand=False, flags=re.DOTALL))
     result = series.str.extract(search, expand=False, flags=re.DOTALL)
     no_integers = [x for x in result.columns.values if not isinstance(x, int)]
     return result[no_integers].copy()
@@ -33,31 +26,19 @@ def get_8kfilings(df):
 def extract_secinfos(df):
     """Extract SEC infos from header."""
     search_sec = (
-        "^.*?<ACCEPTANCE-DATETIME>(?P<DATE_ACCEPTED>.+?)\\r\\n"
-        "ACCESSION NUMBER:[\\t]+(?P<ACCESSION_NO>.+?)\\r\\n"
-        "CONFORMED SUBMISSION TYPE:[\\t]+(?P<SUB_TYPE>.+?)\\r\\n"
-        "PUBLIC DOCUMENT COUNT:[\\t]+(?P<DOC_COUNT>.+?)\\r\\n"
-        "CONFORMED PERIOD OF REPORT:[\\t]+(?P<REPORT_PERIOD>\d+?)\\r\\n"
-        ".*?ITEM INFORMATION:[\\t]+(?P<ITEM_INFO>.+?)[\\r\\n|.]+?"
-        "FILED AS OF DATE:[\\t]+(?P<DATE_FILED>.+?)\\r\\n"
-        "(DATE AS OF CHANGE:[\\t]+(?P<CHANGE_DATE>\d+)?[\\r\\n]*)?")
+        "^.*?<ACCEPTANCE-DATETIME>(?P<DATE_ACCEPTED>.+?)\\n"
+        "ACCESSION NUMBER:[\\t]+(?P<ACCESSION_NO>.+?)\\n"
+        "CONFORMED SUBMISSION TYPE:[\\t]+(?P<SUB_TYPE>.+?)\\n"
+        "PUBLIC DOCUMENT COUNT:[\\t]+(?P<DOC_COUNT>.+?)\\n"
+        "CONFORMED PERIOD OF REPORT:[\\t]+(?P<REPORT_PERIOD>\d+?)\\n"
+        ".*?ITEM INFORMATION:[\\t]+(?P<ITEM_INFO>.+?)[\\n|.]+?"
+        "FILED AS OF DATE:[\\t]+(?P<DATE_FILED>.+?)\\n"
+        "(DATE AS OF CHANGE:[\\t]+(?P<CHANGE_DATE>\d+)?[\\n]*)?")
 
     secdf = series_extract(df.iloc[:, 0], search_sec, re.DOTALL)
     with open("df.csv", mode="w") as f:
         df.iloc[:, 0].to_csv(f)
-
-    """
-    itemsdf = (
-        secdf
-        .apply(lambda x: (x.astype(str)
-                          .str.replace("ITEM INFORMATION:\t\t", "")))
-        .apply(lambda x: x.astype(str).str.replace("\n", ";")))
-    dummiesdf = itemsdf.ITEM_INFO.str.get_dummies(sep=";").add_prefix("d")
-    del secdf["ITEM_INFO"]
-    return secdf, dummiesdf
-    """
     secdf["ITEM_INFO"] = repr(secdf["ITEM_INFO"])
-    print("Success!")
     return secdf
 
 
@@ -68,7 +49,7 @@ def process_df(df):
         .iloc[:, 1:2]
         .copy()
         .squeeze()
-        .str.split("\r\n\r\n\t", expand=True))
+        .str.split("\n\n\t", expand=True))
     del rawdf[0]
     return rawdf
 
@@ -76,16 +57,16 @@ def process_df(df):
 def extract_compdata(df):
     """Extract company data from header."""
     search_compdata = (
-        "[\\r\\n|.]*?(CONFORMED NAME:[\\t]+"
-        "(?P<NAME>.+?)\\r\\n[\\t]+)"
+        "[\\n|.]*?(CONFORMED NAME:[\\t]+"
+        "(?P<NAME>.+?)\\n[\\t]+)"
         "(CENTRAL INDEX KEY:[\\t]+"
-        "(?P<CIK>\d+?)\\r\\n[\\t]+)?"
+        "(?P<CIK>\d+?)\\n[\\t]+)?"
         "(STANDARD INDUSTRIAL CLASSIFICATION:\\t"
         "((?P<SICNAME>[^\d]+?))?\s\[("
-        "?P<SICNUMBER>\d+?)\]\\r\\n[\\t]+)?"
-        "(IRS NUMBER:[\\t]+(?P<IRS_NUMER>\d*)\\r\\n[\\t]*)?"
+        "?P<SICNUMBER>\d+?)\]\\n[\\t]+)?"
+        "(IRS NUMBER:[\\t]+(?P<IRS_NUMER>\d*)\\n[\\t]*)?"
         "(STATE OF INCORPORATION:[\\t]+"
-        "(?P<STATE_INCORP>\w+)([\\r\\n]+[\\t]+)?)?"
+        "(?P<STATE_INCORP>\w+)([\\n]+[\\t]+)?)?"
         "(FISCAL YEAR END:[\\t]+(?P<FISCAL_END>\d+))?.*$")
     compdatadf = series_extract(df[1], search_compdata, re.M)
     return compdatadf
@@ -94,9 +75,9 @@ def extract_compdata(df):
 def extract_filinginfos(df):
     """Extract filings information from header."""
     search_filing = (
-        "FORM TYPE:[\\t]+(?P<FORM_TYPE>.+?)\\r\\n[\\t]+"
-        "SEC ACT:[\\t]+(?P<SEC_ACT>.+?)\\r\\n[\\t]+"
-        "SEC FILE NUMBER:[\\t]+(?P<SEC_FILE_NO>.+)\\r"
+        "FORM TYPE:[\\t]+(?P<FORM_TYPE>.+?)\\n[\\t]+"
+        "SEC ACT:[\\t]+(?P<SEC_ACT>.+?)\\n[\\t]+"
+        "SEC FILE NUMBER:[\\t]+(?P<SEC_FILE_NO>.+)"
         "(\\n[\\t]+FILM NUMBER:[\\t]+(?P<FILM_NO>\d+))?")
 
     filingsdf = series_extract(df[2], search_filing, re.M)
@@ -124,14 +105,14 @@ def extract_addresses(df):
     mailadr = pd.concat(cols)
 
     search_address = (
-        "(?P<TYPE>.+?) ADDRESS:[(\\t|\\r\\n]*"
-        "(STREET 1:[\\t]+(?P<STREET1>.+?)[(\\t|\\r\\n]+)?"
-        "(STREET 2:[\\t]+(?P<STREET2>.+?)[(\\t|\\r\\n]+)?"
-        "(CITY:[\\t]+(?P<CITY>.+?)[(\\t|\\r\\n]+)?"
-        "(STATE:[\\t]+(?P<STATE>\w+?)[(\\t|\\r\\n]+)?"
-        "(ZIP:[\\t]+(?P<ZIP>\d+)[(\\t|\\r\\n]*)?"
+        "(?P<TYPE>.+?) ADDRESS:[(\\t|\\n]*"
+        "(STREET 1:[\\t]+(?P<STREET1>.+?)[(\\t|\\n]+)?"
+        "(STREET 2:[\\t]+(?P<STREET2>.+?)[(\\t|\\n]+)?"
+        "(CITY:[\\t]+(?P<CITY>.+?)[(\\t|\\n]+)?"
+        "(STATE:[\\t]+(?P<STATE>\w+?)[(\\t|\\n]+)?"
+        "(ZIP:[\\t]+(?P<ZIP>\d+)[(\\t|\\n]*)?"
         "(BUSINESS PHONE:[\\t]+"
-        "(?P<PHONE>.+)[(\\t|\\r\\n]*)?")
+        "(?P<PHONE>.+)[(\\t|\\n]*)?")
 
     businessdf = (
         series_extract(businessadr, search_address, re.M)
@@ -169,7 +150,7 @@ def extract_formercomp(df):
     formerprocess.columns = formerprocess.columns.droplevel()
     search_former = (
         "FORMER CONFORMED NAME:[\\t]+"
-        "(?P<FORMER_NAME>.+?)\\r\\n[\\t]+"
+        "(?P<FORMER_NAME>.+?)\\n[\\t]+"
         "DATE OF NAME CHANGE:[\\t]+(?P<NAME_CHANGE_DATE>\d+)")
     formers = []
     y = 0
@@ -189,15 +170,11 @@ def run_header_pipeline(doc):
     onlyheadersdf = get_headerfiles(doc)
     # Extract the SEC information
     secdf = extract_secinfos(onlyheadersdf)
-    print(secdf)
     # Split the rest of header into processable columns
     workdf = process_df(onlyheadersdf)
-    print(workdf)
     # Extract company data, filings data, adresses and former company infor
     compdatadf = extract_compdata(workdf)
-    print("Compdate")
     filingsdf = extract_filinginfos(workdf)
-    print("filingsdf")
     businessdf, maildf = extract_addresses(workdf)
     formerdf = extract_formercomp(workdf)
     # Consolidate all information contained in the header
@@ -212,7 +189,6 @@ def run_header_pipeline(doc):
                        axis=1)
     # Standardize column names
     consdf.columns = consdf.columns.str.lower().str.replace(" ", "_")
-    print("Made it through pipeline")
     return consdf
 
 
@@ -236,7 +212,7 @@ def run_filings_pipeline(doc):
     # Extract the SEC information
     result = onlyfilingsdf.apply(extract_filings_txt, axis=1)
     # Merge with original dataframe
-    mergedf = pd.concat([importdf.loc[onlyfilingsdf.index]["url"],
+    mergedf = pd.concat([doc.loc[onlyfilingsdf.index]["url"],
                          pd.DataFrame(result, columns=["text"])],
                         axis=1)
     return mergedf
@@ -246,15 +222,9 @@ def main(doc, logger):
     """Extract information from filings."""
 
     # Extract header data
-    tqdm.write("Extracting metadata.")
     extract_header = run_header_pipeline(doc)
-
     # Extract filing data
-    tqdm.write("Extracting filings content.")
     extract_txt = run_filings_pipeline(doc)
-
-    # Merge and store
-    tqdm.write("Consolidating and saving on disk.")
+    # Merge
     consdf = pd.merge(extract_txt, extract_header, on="url")
-    tqdm.write("Done.")
     return consdf

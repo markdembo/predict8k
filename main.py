@@ -3,7 +3,6 @@
 To run:
 python -m luigi --module main ExtractInfo --date "2018-02" --local-scheduler
 
-TODO: Add Step 3
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
 """
 import os
@@ -111,8 +110,12 @@ class ConsolidateFilings(luigi.Task):
         load_dotenv(find_dotenv())
         output_dir = os.environ.get("PATH_INTERIM")
         filename = (
-            "{:filings_%Y-%m_content.csv}"
+            "{:filings_%Y-%m_}"
             .format(self.date)
+            +
+            "".join(self.formtype)
+            +
+            "_content.csv"
         )
         return luigi.LocalTarget(output_dir + filename)
 
@@ -122,9 +125,9 @@ class ConsolidateFilings(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            with self.input().open('r') as in_file:
+            with self.input().open('r') as f:
                 docs = consolidate.main(
-                    pd.read_csv(in_file, index_col=0, encoding="utf-8"),
+                    pd.read_csv(f, index_col=0, encoding="utf-8"),
                     logger,
                 )
         except Exception as e:
@@ -163,10 +166,16 @@ class ExtractInfo(luigi.Task):
         load_dotenv(find_dotenv())
         output_dir = os.environ.get("PATH_INTERIM")
         filename = (
-            "{:filings_%Y-%m_extract.csv}"
+            "{:filings_%Y-%m_}"
             .format(self.date)
+            +
+            "".join(self.formtype)
+            +
+            "_extract.csv"
         )
-        return luigi.LocalTarget(output_dir + filename)
+        return luigi.LocalTarget(output_dir + filename,
+                                 format=luigi.format.UTF8,
+                                 )
 
     def run(self):
         """Task execution."""
@@ -174,16 +183,15 @@ class ExtractInfo(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            with self.input()[0].open('r') as in_file:
+            with self.input()[0].open('r') as f:
                 docs = extract.main(
-                    pd.read_csv(in_file, index_col=0, encoding="utf-8").reset_index(),
+                    pd.read_csv(f).reset_index(),
                     logger,
                 )
+            with self.output().open('w') as out_file:
+                docs.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
-
-        with self.output().open('w') as out_file:
-            docs.to_csv(out_file, encoding="utf-8")
 
 
 """
