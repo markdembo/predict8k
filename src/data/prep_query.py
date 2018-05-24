@@ -1,8 +1,4 @@
-"""Merge filings data with Compustat data.
-
-TODO: Update documentation
-
-"""
+"""Prepare WRDS query."""
 import io
 import re
 import pandas as pd
@@ -25,6 +21,6 @@ def output_for_wrds(df):
 
 
 def main(df, logger):
-    """Consolidate filings into csv files."""
+    """Prepare WRDS query."""
     query_input = output_for_wrds(df)
     return query_input

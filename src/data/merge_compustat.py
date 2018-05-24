@@ -1,14 +1,8 @@
-"""Merge filings data with Compustat data.
-
-TODO: Update documentation
-
-"""
+"""Merge filings data with Compustat data."""
 import pandas as pd
 
-def merge_computstat_filings(df,
-                             compustat_path,
-                             compustat_pattern,
-                             ):
+
+def merge_computstat_filings(df, compustat_path, compustat_pattern):
     """Merge filings information with Compustat data."""
     year = (
         pd.to_datetime(df.date_filed.astype(str),
@@ -29,8 +23,7 @@ def merge_computstat_filings(df,
 
 
 def main(df, compustat_path, compustat_pattern, logger):
-    """Consolidate filings into csv files."""
-    logger.info('Downloading data from EDGAR database')
+    """Merge filings with Compustat data."""
     output = merge_computstat_filings(df,
                                       compustat_path,
                                       compustat_pattern)
