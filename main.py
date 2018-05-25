@@ -1,10 +1,10 @@
 """Luigi pipeline.
 
 To run:
-python -m luigi --module main PrepQuery --date "2018-02" --local-scheduler
+python -m luigi --module main QueryWRDS --date "2018-02" --local-scheduler
 
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
-TODO: Update documentation
+TODO: Test query class
 
 """
 import os
@@ -17,6 +17,7 @@ import src.data.consolidate as consolidate
 import src.data.extract as extract
 import src.data.merge_compustat as merge_computstat
 import src.data.prep_query as prep_query
+import src.data.query_wrds as query_wrds
 from calendar import monthrange
 import pandas as pd
 import datetime
@@ -308,6 +309,66 @@ class PrepQuery(luigi.Task):
                     pd.read_csv(f).reset_index(),
                     logger,
                 )
+            with self.output().open('w') as out_file:
+                out_file.write(output)
+        except Exception as e:
+            logger.error(e)
+
+
+class QueryWRDS(luigi.Task):
+    """Prepare input for WRDS query
+
+    Convert dataset to input format for WRDS query input
+
+    Args:
+        date (string): Format YYYY-MM
+        formtype (list): List of strings in the formmat
+
+    Output:
+        txt files with wrds queries
+
+    Raises:
+        None
+
+    """
+
+    date = luigi.parameter.MonthParameter()
+    formtype = luigi.ListParameter(default=["8-K"])
+
+    def requires(self):
+        """Set requirements for the task."""
+        return [PrepQuery(self.date, self.formtype)]
+
+    def output(self):
+        """Output of the task."""
+        load_dotenv(find_dotenv())
+        output_dir = os.environ.get("PATH_INTERIM")
+        filename = (
+            "{:filings_%Y-%m_}"
+            .format(self.date)
+            +
+            "".join(self.formtype)
+            +
+            "_queryoutput.csv"
+        )
+        return luigi.LocalTarget(output_dir + filename,
+                                 format=luigi.format.UTF8,
+                                 )
+
+    def run(self):
+        """Task execution."""
+        logging.config.fileConfig("logging.conf")
+        logger = logging.getLogger(__name__)
+        load_dotenv(find_dotenv())
+        try:
+            output = query_wrds.main(
+                      self.input()[0].path,
+                     os.environ.get("WRDS_URL"),
+                     os.environ.get("WRDS_USER"),
+                     os.environ.get("WRDS_PW"),
+                     os.environ.get("DOWNLOAD_PATH"),
+                     logger,
+                     )
             with self.output().open('w') as out_file:
                 out_file.write(output)
         except Exception as e:
