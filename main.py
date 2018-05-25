@@ -31,8 +31,8 @@ class GetFilings(luigi.Task):
         date (string): Format YYYY-MM
         formtype (list): List of strings in the formmat
 
-    Returns:
-        None
+    Output:
+        csv with index of downloaded filings
 
     Raises:
         None
@@ -86,16 +86,16 @@ class GetFilings(luigi.Task):
 
 
 class ConsolidateFilings(luigi.Task):
-    """Download index and filings.
+    """Consoldate downloaded filings
 
-    Downloads index, filings and verifies that all files have been downloaded
+    Store data of single filings files in one file
 
     Args:
         date (string): Format YYYY-MM
         formtype (list): List of strings in the formmat
 
-    Returns:
-        None
+    Output:
+        csv with index and filings content
 
     Raises:
         None
@@ -142,16 +142,16 @@ class ConsolidateFilings(luigi.Task):
 
 
 class ExtractInfo(luigi.Task):
-    """Download index and filings.
+    """Extract information from filings.
 
-    Downloads index, filings and verifies that all files have been downloaded
+    Extracts metadata and contents from filings
 
     Args:
         date (string): Format YYYY-MM
         formtype (list): List of strings in the formmat
 
-    Returns:
-        None
+    Output:
+        csv with extracted information
 
     Raises:
         None
@@ -199,16 +199,16 @@ class ExtractInfo(luigi.Task):
 
 
 class MergeCompuStat(luigi.Task):
-    """Download index and filings.
+    """Merges filings data with Compustat data.
 
-    Downloads index, filings and verifies that all files have been downloaded
+    Merge the filings information with the external Compustat information
 
     Args:
         date (string): Format YYYY-MM
         formtype (list): List of strings in the formmat
 
-    Returns:
-        None
+    Output:
+        csv with merged dataset
 
     Raises:
         None
@@ -258,16 +258,16 @@ class MergeCompuStat(luigi.Task):
 
 
 class PrepQuery(luigi.Task):
-    """Download index and filings.
+    """Prepare input for WRDS query
 
-    Downloads index, filings and verifies that all files have been downloaded
+    Convert dataset to input format for WRDS query input
 
     Args:
         date (string): Format YYYY-MM
         formtype (list): List of strings in the formmat
 
-    Returns:
-        None
+    Output:
+        txt files with wrds queries
 
     Raises:
         None
