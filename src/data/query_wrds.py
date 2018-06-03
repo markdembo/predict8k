@@ -1,21 +1,11 @@
-"""Request taq data.
-
-TODO: Understand files
-TODO: Make pipeline compatible
+"""Request TAQ compatible
 TODO: Update documentation
-TODO: Strip module imports
 TODO: Add download folder management
 
 """
 import os
-# import logging
-# import logging.config
-# import glob
 import time
 import pandas as pd
-import re
-# from dotenv import find_dotenv, load_dotenv
-# from tqdm import tqdm
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -62,24 +52,26 @@ def make_request(url, user, password, f, download_path):
     elem_file.send_keys(f)
 
     # Expand first section
+    """
     cola1 = (
         driver
         .find_element_by_xpath("//*[@id='wrdsqueryform']/div/div[2]/div[1]/a"))
     cola1.click()
     time.sleep(0.1)
-
+    """
     # Enter value in first section
     elem_start = driver.find_element_by_name("begtime")
     elem_start.clear()
     elem_start.send_keys("-600")
 
     # Expand second section
+    """
     cola2 = (
         driver
         .find_element_by_xpath("//*[@id='wrdsqueryform']/div/div[3]/div[1]/a"))
     cola2.click()
     time.sleep(0.1)
-
+    """
     # Deselect variables
     elem_cum_median = (
         driver
@@ -98,12 +90,13 @@ def make_request(url, user, password, f, download_path):
     elem_cum_mean.click()
 
     # Expand third section
+    """
     cola3 = (
         driver
         .find_element_by_xpath("//*[@id='wrdsqueryform']/div/div[4]/div[1]/a"))
     cola3.click()
     time.sleep(0.1)
-
+    """
     # Select output type and enter custom query name
     elem_csv = (
         driver
@@ -156,6 +149,12 @@ def main(f, url, user, password, download_path, logger):
     """
     res = pd.DataFrame(columns=("file", "time"))
     corrected_path = os.path.abspath(download_path) + r"\\"
-    filename = make_request(url, user, password, os.path.abspath(f), corrected_path)
+    filename = make_request(url,
+                            user,
+                            password,
+                            os.path.abspath(f),
+                            corrected_path,
+                            )
+
     res = res.append([{"file": f, "time": filename}])
     return res
