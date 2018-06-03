@@ -14,7 +14,7 @@ def main(sample_start, sample_end, dir_work, sub_index,
     search = edgarsearch.Search(
         sample_start,
         sample_end,
-        30,
+        1000,
         dir_work=dir_work,
         sub_index=sub_index,
         sub_filings=sub_filings,

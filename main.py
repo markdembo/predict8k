@@ -4,8 +4,6 @@ To run:
 python -m luigi --module main QueryWRDS --date "2018-02" --local-scheduler
 
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
-TODO: Test query class
-
 """
 import os
 from dotenv import find_dotenv, load_dotenv
@@ -286,17 +284,26 @@ class PrepQuery(luigi.Task):
         """Output of the task."""
         load_dotenv(find_dotenv())
         output_dir = os.environ.get("PATH_INTERIM")
+
+        try:
+            with self.input()[0].open('r') as f:
+                    n = (pd.read_csv(f).reset_index().shape[0]
+                         // int(os.environ.get("WRDS_QUERY_N")))+1
+        except Exception as e:
+            print(e)
+
         filename = (
             "{:filings_%Y-%m_}"
             .format(self.date)
             +
             "".join(self.formtype)
             +
-            "_queryinput.txt"
+            "_queryinputN.txt"
         )
-        return luigi.LocalTarget(output_dir + filename,
-                                 format=luigi.format.UTF8,
-                                 )
+
+        return [luigi.LocalTarget(output_dir + filename.replace("N", str(i)),
+                                  format=luigi.format.UTF8,
+                                  ) for i in range(0, n)]
 
     def run(self):
         """Task execution."""
@@ -307,11 +314,16 @@ class PrepQuery(luigi.Task):
             with self.input()[0].open('r') as f:
                 output = prep_query.main(
                     pd.read_csv(f).reset_index(),
+                    int(os.environ.get("WRDS_QUERY_N")),
                     logger,
                 )
-            with self.output().open('w') as out_file:
-                out_file.write(output)
+            x = 0
+            for chunk in output:
+                with self.output()[x].open('w') as out_file:
+                    out_file.write(chunk)
+                x += 1
         except Exception as e:
+            print("run")
             logger.error(e)
 
 
@@ -337,7 +349,7 @@ class QueryWRDS(luigi.Task):
 
     def requires(self):
         """Set requirements for the task."""
-        return [PrepQuery(self.date, self.formtype)]
+        return PrepQuery(self.date, self.formtype)
 
     def output(self):
         """Output of the task."""
@@ -362,15 +374,15 @@ class QueryWRDS(luigi.Task):
         load_dotenv(find_dotenv())
         try:
             output = query_wrds.main(
-                      self.input()[0].path,
-                     os.environ.get("WRDS_URL"),
-                     os.environ.get("WRDS_USER"),
-                     os.environ.get("WRDS_PW"),
-                     os.environ.get("DOWNLOAD_PATH"),
-                     logger,
-                     )
+                [f.path for f in self.input()],
+                os.environ.get("WRDS_URL"),
+                os.environ.get("WRDS_USER"),
+                os.environ.get("WRDS_PW"),
+                os.environ.get("DOWNLOAD_PATH"),
+                logger,
+                )
             with self.output().open('w') as out_file:
-                out_file.write(output)
+                output.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
 

@@ -1,7 +1,5 @@
-"""Request TAQ compatible
+"""Request TAQ data
 TODO: Update documentation
-TODO: Add download folder management
-
 """
 import os
 import time
@@ -12,25 +10,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-"""
-# FIXME: Update to fit luigi approach
-def get_files(wrds_path, wrds_suffix):
-    ""Find all input files for the query.""
-    input_files = glob.glob(wrds_path + "*" + wrds_suffix + ".txt")
-    abs_files = [os.path.abspath(f) for f in input_files]
-    return abs_files
-"""
-
 
 def make_request(url, user, password, f, download_path):
     """Automatically fill out the query form online."""
-    options = webdriver.ChromeOptions()
-    options.add_experimental_option("prefs", {
-        "download.default_directory": download_path,
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        "safebrowsing.enabled": True})
-    driver = webdriver.Chrome()
+    custom_options = webdriver.ChromeOptions()
+    custom_options.add_experimental_option(
+        "prefs",
+        {
+            "download.directory_upgrade": True,
+            "download.default_directory": download_path,
+            "download.prompt_for_download": False,
+            #    "safebrowsing.enabled": True,
+        }
+        )
+    driver = webdriver.Chrome(options=custom_options)
     driver.get(url)
     main_window_handle = None
     while not main_window_handle:
@@ -75,7 +68,7 @@ def make_request(url, user, password, f, download_path):
     # Deselect variables
     elem_cum_median = (
         driver
-        .find_element_by_xpath("//*[@id='t_varByGroupId39182_CUM_MEDIAN']"))
+        .find_element_by_xpath("//*[@id='t_varByGroupId39182_158674']"))
     driver.execute_script("arguments[0].style.visibility = 'visible';",
                           elem_cum_median)
     driver.execute_script("arguments[0].style.margin = '0';", elem_cum_median)
@@ -83,7 +76,7 @@ def make_request(url, user, password, f, download_path):
 
     elem_cum_mean = (
         driver
-        .find_element_by_xpath("//*[@id='t_varByGroupId39182_CUM_MEAN']"))
+        .find_element_by_xpath("//*[@id='t_varByGroupId39182_158675']"))
     driver.execute_script("arguments[0].style.visibility = 'visible';",
                           elem_cum_mean)
     driver.execute_script("arguments[0].style.margin = '0';", elem_cum_mean)
@@ -132,29 +125,16 @@ def make_request(url, user, password, f, download_path):
     return link_text
 
 
-def main(f, url, user, password, download_path, logger):
+def main(filelist, url, user, password, download_path, logger):
     """Download return data."""
-
-    """
-    files = get_files(wrds_path, wrds_suffix)
-
-    # corrected_path = re.sub(r"\\", "/",
-    """
-
-    """
-    for f in tqdm(files):
-        tqdm.write("Making request using %s as input file." % f)
-        filename = make_request(url, user, password, f, corrected_path)
-        res = res.append([{"file": f, "time": filename}])
-    """
-    res = pd.DataFrame(columns=("file", "time"))
+    result = pd.DataFrame(columns=("file", "time"))
     corrected_path = os.path.abspath(download_path) + r"\\"
-    filename = make_request(url,
-                            user,
-                            password,
-                            os.path.abspath(f),
-                            corrected_path,
-                            )
-
-    res = res.append([{"file": f, "time": filename}])
-    return res
+    for f in filelist:
+        filename = make_request(url,
+                                user,
+                                password,
+                                os.path.abspath(f),
+                                corrected_path,
+                                )
+        result = result.append([{"file": f, "time": filename}])
+    return result
