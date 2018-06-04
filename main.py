@@ -4,6 +4,8 @@ To run:
 python -m luigi --module main QueryWRDS --date "2018-02" --local-scheduler
 
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
+TO-DO: Investige low match rate of Compustat DB
+TO-DO: Update docummentaiton
 """
 import os
 from dotenv import find_dotenv, load_dotenv
@@ -11,11 +13,11 @@ import luigi
 import logging
 import logging.config
 import src.data.download as download
-import src.data.consolidate as consolidate
+import src.data.consolidate_edgar as consolidate_edgar
 import src.data.extract as extract
 import src.data.merge_compustat as merge_computstat
 import src.data.prep_query as prep_query
-import src.data.query_wrds as query_wrds
+import src.data.query_taq as query_taq
 from calendar import monthrange
 import pandas as pd
 import datetime
@@ -129,7 +131,7 @@ class ConsolidateFilings(luigi.Task):
         load_dotenv(find_dotenv())
         try:
             with self.input().open('r') as f:
-                docs = consolidate.main(
+                docs = consolidate_edgar.main(
                     pd.read_csv(f, index_col=0, encoding="utf-8"),
                     logger,
                 )
@@ -373,7 +375,7 @@ class QueryWRDS(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            output = query_wrds.main(
+            output = query_taq.main(
                 [f.path for f in self.input()],
                 os.environ.get("WRDS_URL"),
                 os.environ.get("WRDS_USER"),

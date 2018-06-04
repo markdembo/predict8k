@@ -11,14 +11,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-def make_request(url, user, password, f, download_path):
+def make_request(url, user, password, f, download_path, logger):
     """Automatically fill out the query form online."""
+    corrected_path = os.path.abspath(download_path) + r"\\"
     custom_options = webdriver.ChromeOptions()
     custom_options.add_experimental_option(
         "prefs",
         {
             "download.directory_upgrade": True,
-            "download.default_directory": download_path,
+            "download.default_directory": corrected_path,
             "download.prompt_for_download": False,
             #    "safebrowsing.enabled": True,
         }
@@ -44,27 +45,11 @@ def make_request(url, user, password, f, download_path):
     elem_file.clear()
     elem_file.send_keys(f)
 
-    # Expand first section
-    """
-    cola1 = (
-        driver
-        .find_element_by_xpath("//*[@id='wrdsqueryform']/div/div[2]/div[1]/a"))
-    cola1.click()
-    time.sleep(0.1)
-    """
     # Enter value in first section
     elem_start = driver.find_element_by_name("begtime")
     elem_start.clear()
     elem_start.send_keys("-600")
 
-    # Expand second section
-    """
-    cola2 = (
-        driver
-        .find_element_by_xpath("//*[@id='wrdsqueryform']/div/div[3]/div[1]/a"))
-    cola2.click()
-    time.sleep(0.1)
-    """
     # Deselect variables
     elem_cum_median = (
         driver
@@ -82,14 +67,6 @@ def make_request(url, user, password, f, download_path):
     driver.execute_script("arguments[0].style.margin = '0';", elem_cum_mean)
     elem_cum_mean.click()
 
-    # Expand third section
-    """
-    cola3 = (
-        driver
-        .find_element_by_xpath("//*[@id='wrdsqueryform']/div/div[4]/div[1]/a"))
-    cola3.click()
-    time.sleep(0.1)
-    """
     # Select output type and enter custom query name
     elem_csv = (
         driver
@@ -112,29 +89,43 @@ def make_request(url, user, password, f, download_path):
     # Wait and download
     driver.switch_to.window(signin_window_handle)
     wait = WebDriverWait(driver, 400, poll_frequency=1)
-    query_done = wait.until((
+    wait.until((
         EC.text_to_be_present_in_element((By.XPATH,
                                          "//*[@id='main']/p[1]"),
                                          "Your output is complete")))
     a_csv = elemsubmit = driver.find_element_by_xpath('//*[@id="main"]/p[2]/a')
     link_text = a_csv.text
     a_csv.click()
-    time.sleep(60)
+    local_path = os.path.relpath(download_path + link_text)
+    print(local_path)
+    try:
+        x = 0
+        timeout = 120  # seconds to timeout
+        while not os.path.exists(local_path):
+            time.sleep(1)
+            x += 1
+            if x >= timeout:
+                break
+    except Exception as e:
+        logger.errror("TAQ download timeout")
     driver.close()
     driver.quit()
-    return link_text
+    return local_path
 
 
 def main(filelist, url, user, password, download_path, logger):
     """Download return data."""
-    result = pd.DataFrame(columns=("file", "time"))
-    corrected_path = os.path.abspath(download_path) + r"\\"
+    result = pd.DataFrame(columns=("input", "output"))
     for f in filelist:
-        filename = make_request(url,
+        filepath = make_request(url,
                                 user,
                                 password,
                                 os.path.abspath(f),
-                                corrected_path,
+                                download_path,
+                                logger,
                                 )
-        result = result.append([{"file": f, "time": filename}])
+        result = result.append([{
+                "input": f,
+                "output": filepath,
+            }])
     return result
