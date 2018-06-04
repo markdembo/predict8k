@@ -100,7 +100,7 @@ def make_request(url, user, password, f, download_path, logger):
     print(local_path)
     try:
         x = 0
-        timeout = 120  # seconds to timeout
+        timeout = 180  # seconds to timeout
         while not os.path.exists(local_path):
             time.sleep(1)
             x += 1
