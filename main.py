@@ -4,7 +4,6 @@ To run:
 python -m luigi --module main QueryWRDS --date "2018-02" --local-scheduler
 
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
-TO-DO: Investige low match rate of Compustat DB
 TO-DO: Update docummentaiton
 """
 import os
@@ -15,7 +14,7 @@ import logging.config
 import src.data.download as download
 import src.data.consolidate_edgar as consolidate_edgar
 import src.data.extract as extract
-import src.data.merge_compustat as merge_computstat
+import src.data.merge_ticker as merge_ticker
 import src.data.prep_query as prep_query
 import src.data.query_taq as query_taq
 from calendar import monthrange
@@ -246,10 +245,9 @@ class MergeCompuStat(luigi.Task):
         load_dotenv(find_dotenv())
         try:
             with self.input()[0].open('r') as f:
-                docs = merge_computstat.main(
+                docs = merge_ticker.main(
                     pd.read_csv(f).reset_index(),
-                    os.environ.get("PATH_EXTERNAL"),
-                    os.environ.get("FNAME_PATTERN_COMPUTSTAT"),
+                    os.environ.get("PATH_TICKER"),
                     logger,
                 )
             with self.output().open('w') as out_file:
@@ -280,7 +278,12 @@ class PrepQuery(luigi.Task):
 
     def requires(self):
         """Set requirements for the task."""
-        return [MergeCompuStat(self.date, self.formtype)]
+        return MergeCompuStat(self.date, self.formtype)
+    
+    def complete(self):
+        if not os.path.exists(self.input().path):
+            return False
+        super().complete()
 
     def output(self):
         """Output of the task."""
@@ -288,9 +291,10 @@ class PrepQuery(luigi.Task):
         output_dir = os.environ.get("PATH_INTERIM")
 
         try:
-            with self.input()[0].open('r') as f:
+            with self.input().open('r') as f:
                     n = (pd.read_csv(f).reset_index().shape[0]
                          // int(os.environ.get("WRDS_QUERY_N")))+1
+            print("PrepQuery outputs: {}".format(n))
         except Exception as e:
             print(e)
 
