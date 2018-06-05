@@ -4,16 +4,17 @@ To run:
 python -m luigi --module main QueryWRDS --date "2018-02" --local-scheduler
 
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
-TO-DO: Update docummentaiton
+TODO: Update docummentaiton
 """
 import os
 from dotenv import find_dotenv, load_dotenv
 import luigi
 import logging
 import logging.config
-import src.data.download as download
+import src.data.download_filings as download_filings
 import src.data.consolidate_edgar as consolidate_edgar
 import src.data.extract as extract
+import src.data.download_cikticker as download_cikticker
 import src.data.merge_ticker as merge_ticker
 import src.data.prep_query as prep_query
 import src.data.query_taq as query_taq
@@ -68,7 +69,7 @@ class GetFilings(luigi.Task):
         end_day = monthrange(self.date.year, self.date.month)[1]
         start_date = datetime.date(self.date.year, self.date.month, 1)
         end_date = datetime.date(self.date.year, self.date.month, end_day)
-        docs = download.main(
+        docs = download_filings.main(
             start_date.strftime("%Y%m%d"),
             end_date.strftime("%Y%m%d"),
             os.environ.get("PATH_EDGAR"),
@@ -198,7 +199,52 @@ class ExtractInfo(luigi.Task):
             logger.error(e)
 
 
-class MergeCompuStat(luigi.Task):
+class GetCIKTicker(luigi.Task):
+    """Download index and filings.
+
+    Downloads index, filings and verifies that all files have been downloaded
+
+    Args:
+        date (string): Format YYYY-MM
+        formtype (list): List of strings in the formmat
+
+    Output:
+        csv with index of downloaded filings
+
+    Raises:
+        None
+
+    """
+
+    def requires(self):
+        """Set requirements for the task."""
+        return []
+
+    def output(self):
+        """Output of the task."""
+        load_dotenv(find_dotenv())
+        external_dir = os.environ.get("PATH_EXTERNAL")
+        filename = "cik_ticker.csv"
+        return luigi.LocalTarget(external_dir + filename)
+
+    def run(self):
+        """Task execution."""
+        logging.config.fileConfig("logging.conf")
+        logger = logging.getLogger(__name__)
+        load_dotenv(find_dotenv())
+        content = download_cikticker.main(
+            os.environ.get("CIK_TICKER_URL"),
+            logger,
+        )
+
+        try:
+            with self.output().open('w') as out_file:
+                out_file.write(content)
+        except Exception as e:
+            logger.error(e)
+
+
+class MergeTicker(luigi.Task):
     """Merges filings data with Compustat data.
 
     Merge the filings information with the external Compustat information
@@ -220,7 +266,10 @@ class MergeCompuStat(luigi.Task):
 
     def requires(self):
         """Set requirements for the task."""
-        return [ExtractInfo(self.date, self.formtype)]
+        return {
+            "filings": ExtractInfo(self.date, self.formtype),
+            "cikticker": GetCIKTicker()
+        }
 
     def output(self):
         """Output of the task."""
@@ -244,12 +293,16 @@ class MergeCompuStat(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            with self.input()[0].open('r') as f:
-                docs = merge_ticker.main(
-                    pd.read_csv(f).reset_index(),
-                    os.environ.get("PATH_TICKER"),
-                    logger,
-                )
+            with self.input()["filings"].open('r') as f:
+                filings = pd.read_csv(f).reset_index()
+
+            with self.input()["cikticker"].open('r') as f:
+                cikticker = pd.read_csv(f).reset_index()
+            docs = merge_ticker.main(
+                filings,
+                cikticker,
+                logger,
+            )
             with self.output().open('w') as out_file:
                 docs.to_csv(out_file, encoding="utf-8")
         except Exception as e:
@@ -278,12 +331,16 @@ class PrepQuery(luigi.Task):
 
     def requires(self):
         """Set requirements for the task."""
-        return MergeCompuStat(self.date, self.formtype)
-    
+        return MergeTicker(self.date, self.formtype)
+
     def complete(self):
         if not os.path.exists(self.input().path):
             return False
-        super().complete()
+
+        for f in self.output():
+            if not os.path.exists(f.path):
+                return False
+        return True
 
     def output(self):
         """Output of the task."""
@@ -294,7 +351,6 @@ class PrepQuery(luigi.Task):
             with self.input().open('r') as f:
                     n = (pd.read_csv(f).reset_index().shape[0]
                          // int(os.environ.get("WRDS_QUERY_N")))+1
-            print("PrepQuery outputs: {}".format(n))
         except Exception as e:
             print(e)
 
@@ -317,7 +373,7 @@ class PrepQuery(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            with self.input()[0].open('r') as f:
+            with self.input().open('r') as f:
                 output = prep_query.main(
                     pd.read_csv(f).reset_index(),
                     int(os.environ.get("WRDS_QUERY_N")),

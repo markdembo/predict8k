@@ -9,7 +9,7 @@ def output_for_wrds(df, n):
     output_list = []
     list_df = [df[i:i+n] for i in range(0, df.shape[0], n)]
     for chunk in list_df:
-        extract = chunk[["tic", "date_accepted"]].copy()
+        extract = chunk[["ticker", "date_accepted"]].copy()
         extract["datetime"] = pd.to_datetime(extract.date_accepted,
                                              format="%Y%m%d%H%M%S")
         del extract["date_accepted"]

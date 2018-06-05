@@ -3,13 +3,11 @@ import pandas as pd
 from fuzzywuzzy import fuzz
 
 
-def merge_computstat_filings(df, fname):
+def merge(filings_df, citicker_df):
     """Merge filings information with Compustat data."""
-    ticker_df = pd.read_csv(fname)
-
     merged_df = pd.merge(
-        df,
-        ticker_df[["cik", "ticker", "name"]],
+        filings_df,
+        citicker_df[["cik", "ticker", "name"]],
         how="inner",
         on="cik",
     )
@@ -25,9 +23,7 @@ def merge_computstat_filings(df, fname):
     return merged_df.loc[merged_df.match > 60]
 
 
-def main(df, ticker_path, logger):
+def main(filings_df, citicker_df, logger):
     """Merge filings with Compustat data."""
-    output = merge_computstat_filings(df,
-                                      ticker_path,
-                                      )
+    output = merge(filings_df, citicker_df)
     return output

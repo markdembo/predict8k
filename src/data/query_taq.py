@@ -97,7 +97,6 @@ def make_request(url, user, password, f, download_path, logger):
     link_text = a_csv.text
     a_csv.click()
     local_path = os.path.relpath(download_path + link_text)
-    print(local_path)
     try:
         x = 0
         timeout = 180  # seconds to timeout
