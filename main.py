@@ -441,7 +441,7 @@ class QueryWRDS(luigi.Task):
                 os.environ.get("WRDS_USER"),
                 os.environ.get("WRDS_PW"),
                 os.environ.get("DOWNLOAD_PATH"),
-                os.environ.get("WRDS_QUERY_TIMEOUT"),
+                int(os.environ.get("WRDS_QUERY_TIMEOUT")),
                 logger,
                 )
             with self.output().open('w') as out_file:

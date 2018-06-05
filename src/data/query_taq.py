@@ -105,7 +105,7 @@ def make_request(url, user, password, f, download_path, timeout, logger):
             if x >= timeout:
                 break
     except Exception as e:
-        logger.errror("TAQ download timeout")
+        logger.error("TAQ download timeout")
     driver.close()
     driver.quit()
     return local_path
@@ -120,6 +120,7 @@ def main(filelist, url, user, password, download_path, timeout, logger):
                                 password,
                                 os.path.abspath(f),
                                 download_path,
+                                timeout,
                                 logger,
                                 )
         result = result.append([{

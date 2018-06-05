@@ -36,8 +36,6 @@ def extract_secinfos(df):
         "(DATE AS OF CHANGE:[\\t]+(?P<CHANGE_DATE>\d+)?[\\n]*)?")
 
     secdf = series_extract(df.iloc[:, 0], search_sec, re.DOTALL)
-    with open("df.csv", mode="w") as f:
-        df.iloc[:, 0].to_csv(f)
     secdf["ITEM_INFO"] = repr(secdf["ITEM_INFO"])
     return secdf
 
