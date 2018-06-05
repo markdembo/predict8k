@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-def make_request(url, user, password, f, download_path, logger):
+def make_request(url, user, password, f, download_path, timeout, logger):
     """Automatically fill out the query form online."""
     corrected_path = os.path.abspath(download_path) + r"\\"
     custom_options = webdriver.ChromeOptions()
@@ -99,7 +99,6 @@ def make_request(url, user, password, f, download_path, logger):
     local_path = os.path.relpath(download_path + link_text)
     try:
         x = 0
-        timeout = 180  # seconds to timeout
         while not os.path.exists(local_path):
             time.sleep(1)
             x += 1
@@ -112,7 +111,7 @@ def make_request(url, user, password, f, download_path, logger):
     return local_path
 
 
-def main(filelist, url, user, password, download_path, logger):
+def main(filelist, url, user, password, download_path, timeout, logger):
     """Download return data."""
     result = pd.DataFrame(columns=("input", "output"))
     for f in filelist:

@@ -72,6 +72,7 @@ class GetFilings(luigi.Task):
         docs = download_filings.main(
             start_date.strftime("%Y%m%d"),
             end_date.strftime("%Y%m%d"),
+            int(os.environ.get("SAMPLE_SIZE")),
             os.environ.get("PATH_EDGAR"),
             os.environ.get("PATH_INDEX"),
             os.environ.get("PATH_FILINGS"),
@@ -325,7 +326,6 @@ class PrepQuery(luigi.Task):
         None
 
     """
-
     date = luigi.parameter.MonthParameter()
     formtype = luigi.ListParameter(default=["8-K"])
 
@@ -441,16 +441,10 @@ class QueryWRDS(luigi.Task):
                 os.environ.get("WRDS_USER"),
                 os.environ.get("WRDS_PW"),
                 os.environ.get("DOWNLOAD_PATH"),
+                os.environ.get("WRDS_QUERY_TIMEOUT"),
                 logger,
                 )
             with self.output().open('w') as out_file:
                 output.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
-
-
-"""
-if __name__ == '__main__':
-
-    luigi.run()
-"""

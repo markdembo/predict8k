@@ -7,14 +7,14 @@ from edgarsearch import edgarsearch
 import pandas as pd
 
 
-def main(sample_start, sample_end, dir_work, sub_index,
+def main(sample_start, sample_end, n, dir_work, sub_index,
          sub_filings, filter_formtype, logger):
     """Download index and filigns from EDGAR database."""
     logger.info('Downloading data from EDGAR database')
     search = edgarsearch.Search(
         sample_start,
         sample_end,
-        1000,
+        n,
         dir_work=dir_work,
         sub_index=sub_index,
         sub_filings=sub_filings,
