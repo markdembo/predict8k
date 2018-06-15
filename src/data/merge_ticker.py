@@ -14,8 +14,8 @@ def merge(filings_df, citicker_df):
 
     merged_df["match"] = (
         merged_df.apply(lambda x: fuzz.ratio(
-                x["name_x"].replace('[^A-Za-z\s]+', '').lower(),
-                x["name_y"].replace('[^A-Za-z\s]+', '').lower()
+                str(x["name_x"]).replace('[^A-Za-z\s]+', '').lower(),
+                str(x["name_y"]).replace('[^A-Za-z\s]+', '').lower()
             ),
             axis=1)
     )
