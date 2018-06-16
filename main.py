@@ -1,10 +1,14 @@
 """Luigi pipeline.
 
 To run:
-python -m luigi --module main QueryWRDS --date "2018-01" --local-scheduler
+python -m luigi --module main ConsildateQuery --date "2018-01"
+pyhton -m luigi --module main GetFullSample --start 2017 --end 2018
 
 NOTE: Modules: lowercase; Classes: CapWords; Functions/Variables: lower_case
 TODO: Update docummentaiton
+TODO: Write function to consolidate and merge TAQ results with filings data
+TODO:
+
 """
 import os
 from dotenv import find_dotenv, load_dotenv
@@ -84,6 +88,7 @@ class GetFilings(luigi.Task):
                 docs.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
+            raise Exception(e)
 
 
 class ConsolidateFilings(luigi.Task):
@@ -197,6 +202,7 @@ class ExtractInfo(luigi.Task):
                 docs.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
+            raise Exception(e)
 
 
 class GetCIKTicker(luigi.Task):
@@ -242,6 +248,7 @@ class GetCIKTicker(luigi.Task):
                 out_file.write(content)
         except Exception as e:
             logger.error(e)
+            raise Exception(e)
 
 
 class MergeTicker(luigi.Task):
@@ -307,6 +314,7 @@ class MergeTicker(luigi.Task):
                 docs.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
+            raise Exception(e)
 
 
 class PrepQuery(luigi.Task):
@@ -343,6 +351,8 @@ class PrepQuery(luigi.Task):
 
     def output(self):
         """Output of the task."""
+        logging.config.fileConfig("logging.conf")
+        logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         output_dir = os.environ.get("PATH_INTERIM")
 
@@ -351,7 +361,8 @@ class PrepQuery(luigi.Task):
                     n = (pd.read_csv(f).reset_index().shape[0]
                          // int(os.environ.get("WRDS_QUERY_N")))+1
         except Exception as e:
-            print(e)
+            logger.error(e)
+            raise Exception(e)
 
         filename = (
             "{:filings_%Y-%m_}"
@@ -376,7 +387,6 @@ class PrepQuery(luigi.Task):
                 output = wrds.prep_query(
                     pd.read_csv(f).reset_index(),
                     int(os.environ.get("WRDS_QUERY_N")),
-                    logger,
                 )
             x = 0
             for chunk in output:
@@ -384,8 +394,8 @@ class PrepQuery(luigi.Task):
                     out_file.write(chunk)
                 x += 1
         except Exception as e:
-            print("run")
             logger.error(e)
+            raise Exception(e)
 
 
 class QueryWRDS(luigi.Task):
@@ -447,9 +457,10 @@ class QueryWRDS(luigi.Task):
                 output.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
+            raise Exception(e)
 
 
-class MergeQuerydata(luigi.Task):
+class ConsolidateQuery(luigi.Task):
     """Prepare input for WRDS query
 
     Convert dataset to input format for WRDS query input
@@ -476,14 +487,14 @@ class MergeQuerydata(luigi.Task):
     def output(self):
         """Output of the task."""
         load_dotenv(find_dotenv())
-        output_dir = os.environ.get("PATH_INTERIM")
+        output_dir = os.environ.get("PATH_PROCESSED")
         filename = (
             "{:filings_%Y-%m_}"
             .format(self.date)
             +
             "".join(self.formtype)
             +
-            "_queryoutput.csv"
+            "_returns.csv"
         )
         return luigi.LocalTarget(output_dir + filename,
                                  format=luigi.format.UTF8,
@@ -491,4 +502,76 @@ class MergeQuerydata(luigi.Task):
 
     def run(self):
         """Task execution."""
-        pass
+        logging.config.fileConfig("logging.conf")
+        logger = logging.getLogger(__name__)
+        load_dotenv(find_dotenv())
+        try:
+            with self.input().open('r') as f:
+                output = wrds.consolidate_results(
+                    pd.read_csv(f).reset_index(),
+                )
+            with self.output().open('w') as out_file:
+                output.to_csv(out_file, encoding="utf-8")
+        except Exception as e:
+            logger.error(e)
+            raise Exception(e)
+
+
+class GetFullSample(luigi.Task):
+    """Prepare input for WRDS query
+
+    Convert dataset to input format for WRDS query input
+
+    Args:
+        date (string): Format YYYY-MM
+        formtype (list): List of strings in the formmat
+
+    Output:
+        txt files with wrds queries
+
+    Raises:
+        None
+
+    """
+
+    start = luigi.parameter.IntParameter()
+    end = luigi.parameter.IntParameter()
+    formtype = luigi.ListParameter(default=["8-K"])
+
+    def requires(self):
+        """Set requirements for the task."""
+        dates = [datetime.date(year, month, 1)
+                 for month in range(1, 13)
+                 for year in range(self.start, self.end)]
+
+        return [QueryWRDS(date, self.formtype) for date in dates]
+
+    def output(self):
+        """Output of the task."""
+        load_dotenv(find_dotenv())
+        output_dir = os.environ.get("PATH_PROCESSED")
+        filename = (
+            "returns_{}_{}"
+            .format(self.start, self.end)
+            +
+            "".join(self.formtype)
+            +
+            "_returns.csv"
+        )
+        return luigi.LocalTarget(output_dir + filename,
+                                 format=luigi.format.UTF8,
+                                 )
+
+    def run(self):
+        """Task execution."""
+        logging.config.fileConfig("logging.conf")
+        logger = logging.getLogger(__name__)
+        load_dotenv(find_dotenv())
+        try:
+            dfs = [pd.read_csv(file.path) for file in self.input()]
+            consildated_df = pd.concat(dfs)
+            with self.output().open('w') as out_file:
+                consildated_df.to_csv(out_file, encoding="utf-8")
+        except Exception as e:
+            logger.error(e)
+            raise Exception(e)

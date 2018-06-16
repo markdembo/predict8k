@@ -154,3 +154,10 @@ def run_query(filelist, url, user, password, download_path, timeout, logger):
             "output": filepath,
         }])
     return result
+
+
+def consolidate_results(df):
+    query_results = df.output
+    dfs = [pd.read_csv(file) for file in query_results]
+    consildated_df = pd.concat(dfs)
+    return consildated_df
