@@ -16,8 +16,7 @@ import src.data.consolidate_edgar as consolidate_edgar
 import src.data.extract as extract
 import src.data.download_cikticker as download_cikticker
 import src.data.merge_ticker as merge_ticker
-import src.data.prep_query as prep_query
-import src.data.query_taq as query_taq
+import src.data.wrds as wrds
 from calendar import monthrange
 import pandas as pd
 import datetime
@@ -374,7 +373,7 @@ class PrepQuery(luigi.Task):
         load_dotenv(find_dotenv())
         try:
             with self.input().open('r') as f:
-                output = prep_query.main(
+                output = wrds.prep_query(
                     pd.read_csv(f).reset_index(),
                     int(os.environ.get("WRDS_QUERY_N")),
                     logger,
@@ -435,7 +434,7 @@ class QueryWRDS(luigi.Task):
         logger = logging.getLogger(__name__)
         load_dotenv(find_dotenv())
         try:
-            output = query_taq.main(
+            output = wrds.run_query(
                 [f.path for f in self.input()],
                 os.environ.get("WRDS_URL"),
                 os.environ.get("WRDS_USER"),
@@ -448,3 +447,48 @@ class QueryWRDS(luigi.Task):
                 output.to_csv(out_file, encoding="utf-8")
         except Exception as e:
             logger.error(e)
+
+
+class MergeQuerydata(luigi.Task):
+    """Prepare input for WRDS query
+
+    Convert dataset to input format for WRDS query input
+
+    Args:
+        date (string): Format YYYY-MM
+        formtype (list): List of strings in the formmat
+
+    Output:
+        txt files with wrds queries
+
+    Raises:
+        None
+
+    """
+
+    date = luigi.parameter.MonthParameter()
+    formtype = luigi.ListParameter(default=["8-K"])
+
+    def requires(self):
+        """Set requirements for the task."""
+        return QueryWRDS(self.date, self.formtype)
+
+    def output(self):
+        """Output of the task."""
+        load_dotenv(find_dotenv())
+        output_dir = os.environ.get("PATH_INTERIM")
+        filename = (
+            "{:filings_%Y-%m_}"
+            .format(self.date)
+            +
+            "".join(self.formtype)
+            +
+            "_queryoutput.csv"
+        )
+        return luigi.LocalTarget(output_dir + filename,
+                                 format=luigi.format.UTF8,
+                                 )
+
+    def run(self):
+        """Task execution."""
+        pass
